@@ -1,10 +1,15 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 
 st.set_page_config(
     page_title="F1 AI/ML Analytics Dashboard",
     page_icon="🏎️",
     layout="wide"
 )
+
+# Load race data
+laps = pd.read_csv("race_data.csv")
 
 # ==========================
 # HEADER
@@ -13,26 +18,40 @@ st.set_page_config(
 st.title("🏎️ Formula 1 AI/ML Analytics Dashboard")
 st.subheader("Bahrain Grand Prix 2024")
 
+# Lap Selector
+current_lap = st.slider(
+    "🏁 Select Race Lap",
+    1,
+    int(laps["LapNumber"].max()),
+    1
+)
+
+lap_data = laps[laps["LapNumber"] <= current_lap]
+
+# Dashboard Metrics
 # Dashboard Metrics
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("Drivers", "20")
+    st.metric("Current Lap", current_lap)
 
 with col2:
-    st.metric("Race", "Bahrain GP")
+    st.metric(
+        "Drivers",
+        lap_data["Driver"].nunique()
+    )
 
 with col3:
-    st.metric("Season", "2024")
+    st.metric(
+        "Fastest Speed",
+        f"{lap_data['SpeedST'].max():.1f} km/h"
+    )
 
 with col4:
-    st.metric("ML Model", "Random Forest")
-
-st.success(
-    "✅ Complete Formula 1 Data Science Pipeline Successfully Implemented"
-)
-
-st.markdown("---")
+    st.metric(
+        "Laps Analysed",
+        len(lap_data)
+    )
 
 # ==========================
 # PROJECT OVERVIEW
