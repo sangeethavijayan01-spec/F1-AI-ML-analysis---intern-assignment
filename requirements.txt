@@ -1,7 +1,7 @@
-streamlit
-fastf1
-pandas
-numpy
-scikit-learn
-matplotlib
-seaborn
+flask>=3.0.0
+pandas>=2.1.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+fastf1>=3.3.0
+plotly>=5.18.0
+gunicorn>=21.2.0

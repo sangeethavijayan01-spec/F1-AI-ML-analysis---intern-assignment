@@ -122,21 +122,11 @@ with tab1:
         use_container_width=True
     )
 
-    st.info(
-        "This histogram shows the distribution of lap times across all drivers. "
-        "The mean and median indicators help understand overall race pace consistency."
-    )
-
     st.subheader("Tyre Compound Performance")
 
     st.image(
         "plots/compound_boxplot.png",
         use_container_width=True
-    )
-
-    st.info(
-        "Comparison of Soft, Medium and Hard tyre compounds. "
-        "Lower lap times indicate better performance."
     )
 
     st.subheader("Sector Performance Analysis")
@@ -146,55 +136,25 @@ with tab1:
         use_container_width=True
     )
 
-    st.info(
-        "Average Sector 1, Sector 2 and Sector 3 times for each driver. "
-        "This highlights where drivers gain or lose time."
-    )
-
     st.subheader("Speed Trap Correlation")
 
-    st.image(
-        "plots/speed_correlation.png",
+    fig = px.scatter(
+        lap_data,
+        x="SpeedST",
+        y="LapTime",
+        color="Compound",
+        title=f"Speed vs Lap Time (Up to Lap {current_lap})",
+        hover_data=["Driver"]
+    )
+
+    st.plotly_chart(
+        fig,
         use_container_width=True
     )
 
     st.info(
         "Relationship between top speed and overall lap time. "
-        "The regression line indicates the correlation trend."
-    )
-
-# ==========================
-# MACHINE LEARNING
-# ==========================
-
-with tab2:
-
-    st.header("🤖 Machine Learning Model")
-
-    st.success(
-        "Random Forest Regressor trained to predict Formula 1 lap times."
-    )
-
-    st.subheader("Predicted vs Actual Lap Times")
-
-    st.image(
-        "plots/predicted_vs_actual.png",
-        use_container_width=True
-    )
-
-    st.info(
-        "Points closer to the diagonal reference line indicate more accurate predictions."
-    )
-
-    st.subheader("Feature Importance Analysis")
-
-    st.image(
-        "plots/feature_importance.png",
-        use_container_width=True
-    )
-
-    st.info(
-        "This chart identifies which variables contribute most to lap time prediction."
+        "The chart updates automatically when the lap slider changes."
     )
 
     st.markdown("""

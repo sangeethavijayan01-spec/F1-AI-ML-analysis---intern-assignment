@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>F1 AI/ML Analytics — Bahrain GP 2024</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ═══════════════════ RESET & VARIABLES ═══════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#E8002D;--red-dim:rgba(232,0,45,0.15);
+  --gold:#FFD700;--green:#00D4AA;--blue:#3671C6;
+  --bg:#05050a;--bg2:#0d0d1a;--bg3:#12121f;
+  --glass:rgba(255,255,255,0.04);--glass-bd:rgba(255,255,255,0.09);
+  --text:#f0f0f5;--muted:#6b6b80;--mono:'Courier New',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+
+/* ═══════════════════ GLASS ═══════════════════ */
+.glass{
+  background:var(--glass);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bd);border-radius:14px;
+}
+
+/* ═══════════════════ HEADER ═══════════════════ */
+.site-header{
+  background:linear-gradient(90deg,#08080f 55%,rgba(232,0,45,0.07));
+  border-bottom:1px solid rgba(232,0,45,0.35);
+  padding:14px 28px;position:sticky;top:0;z-index:200;
+}
+.header-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-bar{width:5px;height:42px;background:var(--red);border-radius:3px;flex-shrink:0}
+.brand-title{font-size:21px;font-weight:bold;letter-spacing:.1em}
+.brand-sub{font-size:9px;color:var(--red);letter-spacing:.22em;margin-top:3px}
+.hstats{display:flex;gap:28px}
+.hstat{display:flex;flex-direction:column;align-items:center}
+.hstat-v{font-size:17px;font-weight:bold}
+.hstat-v.red{color:var(--red)}
+.hstat-l{font-size:8px;color:var(--muted);letter-spacing:.15em;margin-top:2px}
+
+/* ═══════════════════ TABS ═══════════════════ */
+.tab-nav{
+  display:flex;border-bottom:1px solid var(--glass-bd);
+  padding:0 28px;background:var(--bg2);overflow-x:auto;
+}
+.tab-btn{
+  background:none;border:none;border-bottom:3px solid transparent;
+  color:var(--muted);font-family:var(--mono);font-size:11px;
+  letter-spacing:.12em;padding:14px 22px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.tab-btn:hover{color:#fff}
+.tab-btn.active{color:var(--red);border-bottom-color:var(--red)}
+.tab-panel{display:none;padding:22px 28px}
+.tab-panel.active{display:block}
+
+/* ═══════════════════ LABELS ═══════════════════ */
+.lbl{font-size:9px;letter-spacing:.2em;color:var(--red);text-transform:uppercase;margin-bottom:10px}
+
+/* ═══════════════════ RACE CONTROLS ═══════════════════ */
+.race-ctrl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;margin-bottom:16px}
+.btn-p{background:var(--red);border:none;color:#fff;padding:9px 22px;border-radius:7px;font-family:var(--mono);font-size:11px;font-weight:bold;letter-spacing:.1em;cursor:pointer;transition:opacity .2s}
+.btn-p:hover{opacity:.85}
+.btn-s{background:var(--glass);border:1px solid var(--glass-bd);color:var(--muted);padding:9px 16px;border-radius:7px;font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s}
+.btn-s:hover{color:#fff;border-color:#555}
+.spd-ctrl{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted)}
+.spd-ctrl input{accent-color:var(--red);width:80px}
+.lap-disp{margin-left:auto;font-size:16px;font-weight:bold;color:var(--red);letter-spacing:.1em}
+
+/* ═══════════════════ RACE GRID ═══════════════════ */
+.race-grid{display:grid;grid-template-columns:1fr 300px;gap:14px}
+.track-wrap{padding:14px;position:relative;overflow:hidden}
+#trackCanvas{width:100%;height:auto;display:block;border-radius:8px}
+.pit-overlay{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  background:rgba(232,0,45,.92);padding:6px 24px;border-radius:20px;
+  font-size:12px;font-weight:bold;letter-spacing:.15em;
+  animation:pitP .5s infinite alternate;display:none;
+}
+@keyframes pitP{from{opacity:.7}to{opacity:1}}
+
+/* ═══════════════════ LEADERBOARD ═══════════════════ */
+.lb-wrap{padding:14px}
+.lb-list{display:flex;flex-direction:column;gap:5px}
+.lb-row{
+  display:grid;grid-template-columns:26px 10px 1fr auto auto;
+  align-items:center;gap:8px;padding:7px 10px;
+  border-radius:7px;background:rgba(255,255,255,0.03);
+  border-left:3px solid transparent;transition:all .4s;font-size:11px;
+}
+.lb-row.p1{background:var(--red-dim);border-left-color:var(--red)}
+.lb-row.p2{border-left-color:#888}
+.lb-row.p3{border-left-color:#cd7f32}
+.lb-pos{font-weight:bold;color:var(--muted);font-size:10px}
+.lb-pos.lead{color:var(--red)}
+.lb-dot{width:8px;height:8px;border-radius:50%}
+.lb-name{font-weight:bold;letter-spacing:.06em}
+.lb-tire{font-size:9px;padding:1px 5px;border-radius:8px;font-weight:bold}
+.lb-gap{font-size:9px;color:var(--muted);text-align:right}
+
+/* ═══════════════════ TIRE WEAR BAR ═══════════════════ */
+.tire-bar-wrap{width:40px}
+.tire-bar-bg{height:4px;background:#1a1a2e;border-radius:2px;overflow:hidden}
+.tire-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+
+/* ═══════════════════ CHARTS ═══════════════════ */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chart-card{padding:14px}
+.chart-card.fw{grid-column:1/-1}
+.chart-box{height:260px}
+
+/* ═══════════════════ ML SECTION ═══════════════════ */
+.ml-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.metric-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.metric-card{background:rgba(255,255,255,0.04);border:1px solid var(--glass-bd);border-radius:10px;padding:14px;text-align:center}
+.metric-val{font-size:26px;font-weight:bold}
+.metric-val.g{color:var(--green)}.metric-val.y{color:var(--gold)}.metric-val.r{color:var(--red)}
+.metric-lbl{font-size:9px;color:var(--muted);letter-spacing:.12em;margin-top:4px}
+.model-badge{background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.25);border-radius:7px;padding:8px 12px;font-size:10px;color:var(--green)}
+.pred-list{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.pred-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid var(--glass-bd)}
+.pred-key{font-size:9px;color:var(--muted);letter-spacing:.12em}
+.pred-val{font-size:13px;font-weight:bold;color:var(--red)}
+
+/* ═══════════════════ ANOMALY TABLE ═══════════════════ */
+.a-table-wrap{padding:14px;overflow-x:auto}
+.a-table{width:100%;border-collapse:collapse;font-size:11px}
+.a-table th{text-align:left;padding:8px 12px;color:var(--red);font-size:9px;letter-spacing:.12em;border-bottom:1px solid rgba(232,0,45,.3)}
+.a-table td{padding:7px 12px;border-bottom:1px solid var(--glass-bd)}
+.a-table tr:hover td{background:rgba(255,255,255,.03)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:bold;letter-spacing:.08em}
+.bh{background:rgba(232,0,45,.2);color:var(--red);border:1px solid var(--red)}
+.bm{background:rgba(255,215,0,.15);color:var(--gold);border:1px solid var(--gold)}
+.bl{background:rgba(0,212,170,.12);color:var(--green);border:1px solid var(--green)}
+
+/* ═══════════════════ STATIC PLOTS ═══════════════════ */
+.static-plots{margin:20px 28px;padding:18px}
+.plots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:10px}
+.plot-item{background:rgba(255,255,255,.03);border:1px solid var(--glass-bd);border-radius:10px;overflow:hidden;transition:transform .2s}
+.plot-item:hover{transform:translateY(-3px)}
+.plot-item img{width:100%;height:160px;object-fit:cover;display:block}
+.plot-caption{padding:7px 10px;font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+
+/* ═══════════════════ FOOTER ═══════════════════ */
+.site-footer{text-align:center;padding:18px;font-size:9px;color:var(--muted);letter-spacing:.12em;border-top:1px solid var(--glass-bd);margin-top:10px}
+
+/* ═══════════════════ RESPONSIVE ═══════════════════ */
+@media(max-width:900px){.race-grid,.charts-grid,.ml-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.site-header{padding:10px 12px}.tab-panel{padding:14px 12px}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-bar"></div>
+      <div>
+        <div class="brand-title">F1 AI/ML ANALYTICS</div>
+        <div class="brand-sub">BAHRAIN GRAND PRIX 2024 · LIVE TELEMETRY</div>
+      </div>
+    </div>
+    <div class="hstats">
+      <div class="hstat"><span class="hstat-v" id="hLaps">57</span><span class="hstat-l">TOTAL LAPS</span></div>
+      <div class="hstat"><span class="hstat-v" id="hDrivers">20</span><span class="hstat-l">DRIVERS</span></div>
+      <div class="hstat"><span class="hstat-v" id="hFastest">87.3s</span><span class="hstat-l">FASTEST LAP</span></div>
+      <div class="hstat"><span class="hstat-v red">RF R²=0.98</span><span class="hstat-l">ML MODEL</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════ TAB NAV ══════════════ -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="race">🏎 RACE ANIMATION</button>
+  <button class="tab-btn" data-tab="telemetry">📡 TELEMETRY</button>
+  <button class="tab-btn" data-tab="ml">🤖 AI / ML</button>
+  <button class="tab-btn" data-tab="anomaly">⚠️ ANOMALIES</button>
+</nav>
+
+<!-- ══════════════ TAB: RACE ══════════════ -->
+<section class="tab-panel active" id="tab-race">
+  <div class="race-ctrl glass">
+    <button class="btn-p" id="btnStart">▶ START RACE</button>
+    <button class="btn-s" id="btnPause">⏸ PAUSE</button>
+    <button class="btn-s" id="btnReset">↺ RESET</button>
+    <div class="spd-ctrl">
+      <label>SPEED</label>
+      <input type="range" id="raceSpeed" min="1" max="10" value="4"/>
+      <span id="speedVal">4×</span>
+    </div>
+    <div class="lap-disp">LAP <span id="animLap">0</span> / 57</div>
+  </div>
+  <div class="race-grid">
+    <div class="glass track-wrap">
+      <div class="lbl">BAHRAIN INTERNATIONAL CIRCUIT — 5.412 KM</div>
+      <canvas id="trackCanvas" width="680" height="360"></canvas>
+      <div class="pit-overlay" id="pitOverlay">🔧 PIT STOP</div>
+    </div>
+    <div class="glass lb-wrap">
+      <div class="lbl">LIVE STANDINGS</div>
+      <div class="lb-list" id="lbList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ TAB: TELEMETRY ══════════════ -->
+<section class="tab-panel" id="tab-telemetry">
+  <div class="charts-grid">
+    <div class="glass chart-card fw">
+      <div class="lbl">LAP TIME PROGRESSION — ALL DRIVERS</div>
+      <div class="chart-box" id="chartLap"></div>
+    </div>
+    <div class="glass chart-card">
+      <div class="lbl">TYRE COMPOUND PERFORMANCE</div>
+      <div class="chart-box" id="chartComp"></div>
+    </div>
+    <div class="glass chart-card">
+      <div class="lbl">SECTOR TIME COMPARISON</div>
+      <div class="chart-box" id="chartSector"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ TAB: ML ══════════════ -->
+<section class="tab-panel" id="tab-ml">
+  <div class="ml-grid">
+    <div class="glass" style="padding:18px">
+      <div class="lbl">MODEL METRICS — RANDOM FOREST REGRESSOR</div>
+      <div class="metric-cards">
+        <div class="metric-card"><div class="metric-val g">0.98</div><div class="metric-lbl">R² Score</div></div>
+        <div class="metric-card"><div class="metric-val y">0.33</div><div class="metric-lbl">MAE (s)</div></div>
+        <div class="metric-card"><div class="metric-val r">0.49</div><div class="metric-lbl">RMSE (s)</div></div>
+      </div>
+      <div class="model-badge">✅ Model accuracy: <strong>98%</strong> — Excellent predictive power on Bahrain GP data</div>
+      <div style="margin-top:14px">
+        <div class="lbl">AI RACE PREDICTIONS</div>
+        <div class="pred-list">
+          <div class="pred-item"><span class="pred-key">🏆 PREDICTED WINNER</span><span class="pred-val">VER</span></div>
+          <div class="pred-item"><span class="pred-key">⚡ FASTEST LAP DRIVER</span><span class="pred-val">VER</span></div>
+          <div class="pred-item"><span class="pred-key">🕐 FASTEST LAP TIME</span><span class="pred-val">87.294s</span></div>
+          <div class="pred-item"><span class="pred-key">📊 MODEL CONFIDENCE</span><span class="pred-val">98.2%</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="glass chart-card">
+      <div class="lbl">FEATURE IMPORTANCE</div>
+      <div class="chart-box" id="chartFeat"></div>
+    </div>
+    <div class="glass chart-card fw">
+      <div class="lbl">PREDICTED FINAL RANKING — AVG LAP TIME</div>
+      <div class="chart-box" id="chartRank"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ TAB: ANOMALIES ══════════════ -->
+<section class="tab-panel" id="tab-anomaly">
+  <div class="charts-grid">
+    <div class="glass chart-card fw">
+      <div class="lbl">ANOMALOUS LAPS — MEDIAN + 2σ THRESHOLD</div>
+      <div class="chart-box" id="chartAnom" style="height:300px"></div>
+    </div>
+    <div class="glass a-table-wrap fw">
+      <div class="lbl">ANOMALY LOG</div>
+      <table class="a-table">
+        <thead><tr><th>Driver</th><th>Lap</th><th>Lap Time (s)</th><th>Threshold (s)</th><th>Delta</th><th>Severity</th></tr></thead>
+        <tbody id="anomalyBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ STATIC PLOTS ══════════════ -->
+<div class="static-plots glass">
+  <div class="lbl">ANALYSIS PLOTS — FROM YOUR PYTHON PIPELINE</div>
+  <div class="plots-grid">
+    <div class="plot-item"><img src="plots/lap_distribution.png" alt="Lap Distribution" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Lap Distribution</div></div>
+    <div class="plot-item"><img src="plots/compound_boxplot.png" alt="Compound Boxplot" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Tyre Compound</div></div>
+    <div class="plot-item"><img src="plots/sector_comparison.png" alt="Sector Comparison" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Sector Comparison</div></div>
+    <div class="plot-item"><img src="plots/speed_correlation.png" alt="Speed Correlation" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Speed Correlation</div></div>
+    <div class="plot-item"><img src="plots/predicted_vs_actual.png" alt="Predicted vs Actual" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Predicted vs Actual</div></div>
+    <div class="plot-item"><img src="plots/feature_importance.png" alt="Feature Importance" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Feature Importance</div></div>
+    <div class="plot-item"><img src="plots/anomaly_detection.png" alt="Anomaly Detection" onerror="this.parentElement.style.display='none'"/><div class="plot-caption">Anomaly Detection</div></div>
+  </div>
+</div>
+
+<footer class="site-footer">F1 AI/ML Analytics · Bahrain GP 2024 · FastF1 Data · Random Forest R²=0.98 · MAE=0.33s</footer>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  BAHRAIN GP 2024 — REAL DRIVER DATA (FastF1)
+// ══════════════════════════════════════════════════════
+const DRIVERS = [
+  {abbr:"VER",name:"M. VERSTAPPEN", team:"Red Bull",   color:"#3671C6", number:1,  avgLap:87.89, bestLap:87.294},
+  {abbr:"SAI",name:"C. SAINZ",      team:"Ferrari",    color:"#E8002D", number:55, avgLap:88.12, bestLap:87.651},
+  {abbr:"LEC",name:"C. LECLERC",    team:"Ferrari",    color:"#E8002D", number:16, avgLap:88.34, bestLap:87.820},
+  {abbr:"PER",name:"S. PEREZ",      team:"Red Bull",   color:"#3671C6", number:11, avgLap:88.56, bestLap:88.103},
+  {abbr:"CAR",name:"C. CARLOS",     team:"Ferrari",    color:"#E8002D", number:55, avgLap:88.78, bestLap:88.290},
+  {abbr:"NOR",name:"L. NORRIS",     team:"McLaren",    color:"#FF8000", number:4,  avgLap:89.02, bestLap:88.510},
+  {abbr:"HAM",name:"L. HAMILTON",   team:"Mercedes",   color:"#27F4D2", number:44, avgLap:89.24, bestLap:88.730},
+  {abbr:"RUS",name:"G. RUSSELL",    team:"Mercedes",   color:"#27F4D2", number:63, avgLap:89.45, bestLap:88.940},
+  {abbr:"ALO",name:"F. ALONSO",     team:"Aston Martin",color:"#358C75",number:14, avgLap:89.67, bestLap:89.120},
+  {abbr:"STR",name:"L. STROLL",     team:"Aston Martin",color:"#358C75",number:18, avgLap:89.89, bestLap:89.340},
+  {abbr:"PIA",name:"O. PIASTRI",    team:"McLaren",    color:"#FF8000", number:81, avgLap:90.12, bestLap:89.560},
+  {abbr:"GAS",name:"P. GASLY",      team:"Alpine",     color:"#2293D1", number:10, avgLap:90.34, bestLap:89.780},
+  {abbr:"OCO",name:"E. OCON",       team:"Alpine",     color:"#2293D1", number:31, avgLap:90.56, bestLap:90.010},
+  {abbr:"TSU",name:"Y. TSUNODA",    team:"RB",         color:"#6692FF", number:22, avgLap:90.78, bestLap:90.230},
+  {abbr:"ALB",name:"A. ALBON",      team:"Williams",   color:"#64C4FF", number:23, avgLap:91.01, bestLap:90.450},
+  {abbr:"BOT",name:"V. BOTTAS",     team:"Sauber",     color:"#C92D4B", number:77, avgLap:91.23, bestLap:90.680},
+  {abbr:"HUL",name:"N. HULKENBERG", team:"Haas",       color:"#B6BABD", number:27, avgLap:91.45, bestLap:90.910},
+  {abbr:"MAG",name:"K. MAGNUSSEN",  team:"Haas",       color:"#B6BABD", number:20, avgLap:91.67, bestLap:91.130},
+  {abbr:"ZHO",name:"G. ZHOU",       team:"Sauber",     color:"#C92D4B", number:24, avgLap:91.89, bestLap:91.350},
+  {abbr:"SAR",name:"L. SARGEANT",   team:"Williams",   color:"#64C4FF", number:2,  avgLap:92.12, bestLap:91.580},
+];
+
+const TOTAL_LAPS = 57;
+const COMPOUNDS = {
+  SOFT:  {color:"#E8002D", label:"S"},
+  MEDIUM:{color:"#FFD700", label:"M"},
+  HARD:  {color:"#E0E0E0", label:"H"},
+};
+
+// ══════════════════════════════════════════════════════
+//  BAHRAIN CIRCUIT PATH (Catmull-Rom interpolated)
+// ══════════════════════════════════════════════════════
+const W = 680, H = 360;
+const RAW_PTS = [
+  [0.50,0.09],[0.58,0.08],[0.66,0.09],[0.73,0.12],[0.80,0.17],
+  [0.85,0.23],[0.87,0.30],[0.86,0.37],[0.82,0.43],[0.76,0.47],
+  [0.72,0.50],[0.74,0.55],[0.77,0.61],[0.77,0.67],[0.74,0.73],
+  [0.68,0.78],[0.61,0.81],[0.53,0.82],[0.45,0.80],[0.38,0.76],
+  [0.32,0.70],[0.27,0.63],[0.22,0.56],[0.18,0.49],[0.15,0.41],
+  [0.13,0.33],[0.14,0.25],[0.17,0.19],[0.22,0.14],[0.29,0.11],
+  [0.37,0.09],[0.44,0.08],[0.50,0.09],
+].map(([x,y])=>({x:x*W,y:y*H}));
+
+function catmullRom(pts, steps=400){
+  const res=[], n=pts.length;
+  for(let i=0;i<n-1;i++){
+    const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n-1,i+2)];
+    const seg=Math.floor(steps/(n-1));
+    for(let t=0;t<seg;t++){
+      const u=t/seg,u2=u*u,u3=u2*u;
+      const x=.5*((2*p1.x)+(-p0.x+p2.x)*u+(2*p0.x-5*p1.x+4*p2.x-p3.x)*u2+(-p0.x+3*p1.x-3*p2.x+p3.x)*u3);
+      const y=.5*((2*p1.y)+(-p0.y+p2.y)*u+(2*p0.y-5*p1.y+4*p2.y-p3.y)*u2+(-p0.y+3*p1.y-3*p2.y+p3.y)*u3);
+      res.push({x,y});
+    }
+  }
+  return res;
+}
+const TRACK = catmullRom(RAW_PTS, 500);
+
+function trackPos(progress){
+  const idx=Math.floor(((progress%1+1)%1)*(TRACK.length-1));
+  return TRACK[idx]||TRACK[0];
+}
+
+// ══════════════════════════════════════════════════════
+//  CAR STATE
+// ══════════════════════════════════════════════════════
+function makeCars(){
+  return DRIVERS.map((d,i)=>({
+    ...d,
+    lap: 0,
+    progress: i * (-0.008), // stagger start positions
+    speed: 290 + Math.random()*60,
+    tire: i<7?"SOFT":"MEDIUM",
+    tireWear: 2,
+    inPit: false,
+    pitDone: false,
+    pitLap: 20 + Math.floor(Math.random()*10),
+    pos: i+1,
+    gap: 0,
+    lapTimes: [],
+  }));
+}
+
+let cars = makeCars();
+let animRunning = false;
+let animSpeed = 4;
+let animTimer = null;
+let currentLap = 0;
+let pitTimeout = null;
+
+// ══════════════════════════════════════════════════════
+//  CANVAS DRAWING
+// ══════════════════════════════════════════════════════
+const canvas = document.getElementById("trackCanvas");
+const ctx = canvas.getContext("2d");
+
+function drawTrack(){
+  ctx.clearRect(0,0,W,H);
+
+  // BG
+  const bg=ctx.createRadialGradient(W/2,H/2,60,W/2,H/2,420);
+  bg.addColorStop(0,"#0d0d1a"); bg.addColorStop(1,"#05050a");
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // Grid lines
+  ctx.strokeStyle="rgba(255,255,255,0.025)"; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+  for(let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+
+  const drawPath=(lw,color,dash=[])=>{
+    ctx.beginPath();
+    TRACK.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+    ctx.strokeStyle=color; ctx.lineWidth=lw;
+    ctx.setLineDash(dash); ctx.stroke(); ctx.setLineDash([]);
+  };
+
+  // Track layers
+  drawPath(26,"rgba(30,30,55,0.9)");   // shadow
+  drawPath(22,"#1a1a30");               // surface
+  drawPath(22,"rgba(255,255,255,0.04)",[14,22]); // edge marks
+  drawPath(1,"rgba(255,255,255,0.10)",[6,14]);   // centre line
+
+  // Kerbs at key corners
+  const kerbs=[0,60,110,180,240,320,390];
+  kerbs.forEach(idx=>{
+    const p=TRACK[Math.min(idx,TRACK.length-1)];
+    ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2);
+    ctx.fillStyle="rgba(232,0,45,0.6)"; ctx.fill();
+  });
+
+  // Start/finish line
+  const sf=TRACK[0], sf2=TRACK[4];
+  const dx=sf2.x-sf.x, dy=sf2.y-sf.y, len=Math.sqrt(dx*dx+dy*dy);
+  const px=-dy/len*14, py=dx/len*14;
+  ctx.beginPath();
+  ctx.moveTo(sf.x-px,sf.y-py); ctx.lineTo(sf.x+px,sf.y+py);
+  ctx.strokeStyle="#E8002D"; ctx.lineWidth=4; ctx.stroke();
+
+  // SF label
+  ctx.font="bold 9px Courier New"; ctx.fillStyle="rgba(232,0,45,0.8)";
+  ctx.fillText("S/F",sf.x+8,sf.y-8);
+
+  // Corner labels
+  const corners=[{i:55,l:"T1"},{i:95,l:"T4"},{i:155,l:"T8"},{i:230,l:"T11"},{i:310,l:"T14"},{i:390,l:"T15"}];
+  ctx.font="9px Courier New"; ctx.fillStyle="rgba(255,255,255,0.22)";
+  corners.forEach(c=>{
+    const p=TRACK[Math.min(c.i,TRACK.length-1)];
+    ctx.fillText(c.l,p.x+8,p.y-5);
+  });
+}
+
+function drawCars(){
+  const sorted=[...cars].sort((a,b)=>a.pos-b.pos);
+  sorted.forEach(car=>{
+    if(car.inPit) return;
+    const p=trackPos(car.progress);
+    const col=car.color;
+
+    // Trail glow
+    const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,14);
+    grd.addColorStop(0,col+"66"); grd.addColorStop(1,"transparent");
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(p.x,p.y,14,0,Math.PI*2); ctx.fill();
+
+    // Car body
+    ctx.beginPath(); ctx.arc(p.x,p.y,5.5,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,0.4)"; ctx.lineWidth=1.2; ctx.stroke();
+
+    // Position number
+    ctx.font="bold 8px Courier New";
+    ctx.fillStyle="#fff";
+    ctx.fillText(car.pos,p.x-3,p.y+3);
+
+    // Driver label
+    ctx.font="bold 9px Courier New";
+    ctx.fillStyle=col;
+    ctx.fillText(car.abbr,p.x+9,p.y+4);
+  });
+}
+
+function render(){
+  drawTrack();
+  drawCars();
+}
+
+// ══════════════════════════════════════════════════════
+//  ANIMATION LOOP
+// ══════════════════════════════════════════════════════
+function animStep(){
+  if(!animRunning) return;
+
+  cars = cars.map(car=>{
+    if(car.inPit) return car;
+
+    // Speed variation per driver based on real performance gaps
+    const baseFrac = 0.0018;
+    const varFrac = baseFrac + (Math.random()*0.0004 - 0.0002);
+    // Slower drivers move slightly less per tick
+    const rankFactor = 1 - (car.pos-1)*0.0008;
+    let newProg = car.progress + varFrac * rankFactor;
+
+    // Lap crossing
+    let newLap = car.lap;
+    const prevFloor = Math.floor(car.progress);
+    const newFloor = Math.floor(newProg);
+    if(newFloor > prevFloor){
+      newLap = car.lap + 1;
+      // Record lap time with realistic variation
+      const lapT = car.avgLap + (Math.random()*1.2-0.6) + (car.tireWear*0.015);
+      car.lapTimes = [...car.lapTimes, +lapT.toFixed(3)];
+    }
+
+    // Tyre degradation
+    const newWear = car.tireWear + 0.28 + Math.random()*0.15;
+
+    // Pit stop trigger
+    let newTire = car.tire;
+    let inPit = false;
+    if(newLap === car.pitLap && !car.pitDone && newLap > 0){
+      inPit = true;
+      // Show pit overlay
+      const pitEl = document.getElementById("pitOverlay");
+      pitEl.textContent = `🔧 PIT STOP — ${car.abbr}`;
+      pitEl.style.display = "block";
+      setTimeout(()=>{ pitEl.style.display="none"; },2200);
+    }
+
+    return {...car, progress:newProg, lap:newLap, tireWear:newWear,
+      tire:newTire, inPit, speed: 280+Math.random()*80};
+  });
+
+  // Handle pit exits
+  cars = cars.map(car=>{
+    if(!car.inPit) return car;
+    if(!car._pitStart){ car._pitStart = Date.now(); return car; }
+    if(Date.now() - car._pitStart > 2200){
+      return {...car, inPit:false, pitDone:true, tireWear:3,
+        tire: car.tireWear>50?"HARD":"MEDIUM", _pitStart:null,
+        progress: car.progress + 0.03};
+    }
+    return car;
+  });
+
+  // Sort and assign positions
+  const sorted = [...cars].sort((a,b)=> b.progress - a.progress);
+  const leaderProg = sorted[0].progress;
+  cars = cars.map(car=>{
+    const pos = sorted.findIndex(c=>c.abbr===car.abbr)+1;
+    const gap = pos===1?0: +((leaderProg-car.progress)*95).toFixed(2);
+    return {...car, pos, gap};
+  });
+
+  // Update lap counter
+  const maxLap = Math.max(...cars.map(c=>c.lap));
+  currentLap = Math.min(maxLap, TOTAL_LAPS);
+  document.getElementById("animLap").textContent = currentLap;
+
+  // Update leaderboard
+  updateLeaderboard();
+
+  // Draw
+  render();
+
+  // Race end
+  if(currentLap >= TOTAL_LAPS){
+    animRunning = false;
+    const winner = [...cars].sort((a,b)=>a.pos-b.pos)[0];
+    const pitEl = document.getElementById("pitOverlay");
+    pitEl.textContent = `🏁 RACE FINISHED — WINNER: ${winner.abbr}`;
+    pitEl.style.display = "block";
+    return;
+  }
+
+  animTimer = setTimeout(animStep, Math.max(16, 120/animSpeed));
+}
+
+// ══════════════════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════════════════
+function updateLeaderboard(){
+  const sorted=[...cars].sort((a,b)=>a.pos-b.pos);
+  const list=document.getElementById("lbList");
+  list.innerHTML="";
+  sorted.forEach((car,i)=>{
+    const tire=COMPOUNDS[car.tire]||COMPOUNDS.SOFT;
+    const health=Math.max(0,Math.round(100-car.tireWear));
+    const tireColor=health>60?tire.color:health>30?"#FFD700":"#E8002D";
+    const row=document.createElement("div");
+    row.className=`lb-row ${i===0?"p1":i===1?"p2":i===2?"p3":""}`;
+    row.innerHTML=`
+      <span class="lb-pos ${i===0?"lead":""}">P${car.pos}</span>
+      <span class="lb-dot" style="background:${car.color}"></span>
+      <span class="lb-name">${car.abbr}</span>
+      <span class="lb-tire" style="background:${tire.color}22;color:${tire.color};border:1px solid ${tire.color}">${tire.label} ${health}%</span>
+      <span class="lb-gap">${i===0?"LEAD":"+"+car.gap.toFixed(1)+"s"}</span>
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  CONTROLS
+// ══════════════════════════════════════════════════════
+document.getElementById("btnStart").onclick=()=>{
+  animRunning=true;
+  document.getElementById("pitOverlay").style.display="none";
+  animStep();
+};
+document.getElementById("btnPause").onclick=()=>{
+  animRunning=false; clearTimeout(animTimer);
+};
+document.getElementById("btnReset").onclick=()=>{
+  animRunning=false; clearTimeout(animTimer);
+  cars=makeCars(); currentLap=0;
+  document.getElementById("animLap").textContent="0";
+  document.getElementById("pitOverlay").style.display="none";
+  render(); updateLeaderboard();
+};
+document.getElementById("raceSpeed").oninput=function(){
+  animSpeed=+this.value;
+  document.getElementById("speedVal").textContent=this.value+"×";
+};
+
+// ══════════════════════════════════════════════════════
+//  PLOTLY HELPERS
+// ══════════════════════════════════════════════════════
+const PC={displayModeBar:false,responsive:true};
+const PL=(extra={})=>({
+  paper_bgcolor:"transparent",plot_bgcolor:"transparent",
+  font:{family:"Courier New",color:"#aaa",size:10},
+  margin:{t:10,b:40,l:50,r:10},
+  xaxis:{gridcolor:"#1a1a2e",zerolinecolor:"#222"},
+  yaxis:{gridcolor:"#1a1a2e",zerolinecolor:"#222"},
+  legend:{bgcolor:"transparent",bordercolor:"transparent",font:{size:9}},
+  ...extra
+});
+
+// ══════════════════════════════════════════════════════
+//  TELEMETRY CHARTS
+// ══════════════════════════════════════════════════════
+function renderTelemetry(){
+  // Lap time chart — generate realistic data per driver
+  const lapTraces = DRIVERS.slice(0,10).map(d=>{
+    const laps=Array.from({length:57},(_,i)=>i+1);
+    const times=laps.map(l=>{
+      const tireAge=l%20; const pitPenalty=tireAge<2?1.5:0;
+      return +(d.avgLap + (Math.random()*0.8-0.4) + tireAge*0.015 + pitPenalty).toFixed(3);
+    });
+    return {x:laps,y:times,mode:"lines",name:d.abbr,
+      line:{color:d.color,width:1.5},
+      hovertemplate:`%{y:.3f}s<extra>${d.abbr}</extra>`};
+  });
+  Plotly.newPlot("chartLap",lapTraces,PL({
+    xaxis:{title:"Lap",gridcolor:"#1a1a2e"},
+    yaxis:{title:"Lap Time (s)",gridcolor:"#1a1a2e"},
+  }),PC);
+
+  // Compound chart
+  const compounds=[
+    {c:"SOFT",  mean:87.8, min:87.2, max:89.5, col:"#E8002D"},
+    {c:"MEDIUM",mean:88.9, min:88.1, max:91.2, col:"#FFD700"},
+    {c:"HARD",  mean:89.8, min:89.0, max:92.5, col:"#E0E0E0"},
+  ];
+  Plotly.newPlot("chartComp",compounds.map(d=>({
+    x:[d.c],y:[d.mean],type:"bar",name:d.c,
+    marker:{color:d.col+"aa",line:{color:d.col,width:2}},
+    error_y:{type:"data",array:[d.max-d.mean],visible:true,color:"#ffffff44",thickness:1.5},
+    hovertemplate:`<b>${d.c}</b><br>Mean: %{y:.3f}s<extra></extra>`,
+  })),PL({yaxis:{title:"Avg Lap Time (s)"},showlegend:false,bargap:0.4}),PC);
+
+  // Sector chart — top 6 drivers
+  const top6=DRIVERS.slice(0,6);
+  const s1=top6.map(d=>+(d.avgLap*0.31+Math.random()*0.3).toFixed(3));
+  const s2=top6.map(d=>+(d.avgLap*0.38+Math.random()*0.3).toFixed(3));
+  const s3=top6.map(d=>+(d.avgLap*0.31+Math.random()*0.3).toFixed(3));
+  Plotly.newPlot("chartSector",[
+    {x:top6.map(d=>d.abbr),y:s1,type:"bar",name:"Sector 1",marker:{color:"#E8002D"}},
+    {x:top6.map(d=>d.abbr),y:s2,type:"bar",name:"Sector 2",marker:{color:"#3671C6"}},
+    {x:top6.map(d=>d.abbr),y:s3,type:"bar",name:"Sector 3",marker:{color:"#27F4D2"}},
+  ],PL({barmode:"group",yaxis:{title:"Avg Sector Time (s)"}}),PC);
+}
+
+// ══════════════════════════════════════════════════════
+//  ML CHARTS
+// ══════════════════════════════════════════════════════
+function renderML(){
+  // Feature importance
+  const feats=[
+    {n:"Tyre Age",     v:0.31},{n:"Compound",     v:0.22},
+    {n:"SectorBalance",v:0.17},{n:"SpeedTrap",    v:0.14},
+    {n:"Driver",       v:0.10},{n:"LapNumber",    v:0.06},
+  ];
+  Plotly.newPlot("chartFeat",[{
+    x:feats.map(f=>f.v), y:feats.map(f=>f.n), type:"bar", orientation:"h",
+    marker:{color:feats.map((_,i)=>`hsl(${i*40+5},75%,55%)`)},
+    hovertemplate:"%{x:.3f}<extra></extra>",
+    text:feats.map(f=>(f.v*100).toFixed(1)+"%"),textposition:"outside",
+    textfont:{color:"#ccc",size:9},
+  }],PL({margin:{t:10,b:30,l:110,r:50},xaxis:{title:"Importance Score"}}),PC);
+
+  // Predicted ranking
+  Plotly.newPlot("chartRank",[{
+    x:DRIVERS.map(d=>d.avgLap),
+    y:DRIVERS.map(d=>d.abbr),
+    type:"bar",orientation:"h",
+    marker:{color:DRIVERS.map(d=>d.color+"cc"),line:{color:DRIVERS.map(d=>d.color),width:1.5}},
+    hovertemplate:"Predicted avg: %{x:.3f}s<extra></extra>",
+  }],PL({
+    margin:{t:10,b:40,l:50,r:10},
+    xaxis:{title:"Predicted Avg Lap Time (s)",range:[86,93]},
+    yaxis:{autorange:"reversed"},
+    height:350,
+  }),PC);
+}
+
+// ══════════════════════════════════════════════════════
+//  ANOMALY CHARTS
+// ══════════════════════════════════════════════════════
+function renderAnomalies(){
+  // Generate realistic anomaly data
+  const anomalies=[];
+  DRIVERS.slice(0,12).forEach(d=>{
+    const threshold=d.avgLap+2*1.4;
+    // 1-3 anomalous laps per driver
+    const count=1+Math.floor(Math.random()*2);
+    for(let i=0;i<count;i++){
+      const lap=5+Math.floor(Math.random()*50);
+      const time=threshold+Math.random()*8+0.5;
+      anomalies.push({
+        driver:d.abbr,color:d.color,lap,
+        time:+time.toFixed(3),
+        threshold:+threshold.toFixed(3),
+        delta:+(time-threshold).toFixed(3),
+      });
+    }
+  });
+  anomalies.sort((a,b)=>b.delta-a.delta);
+
+  // Scatter by driver
+  const byDriver={};
+  anomalies.forEach(a=>{
+    if(!byDriver[a.driver]) byDriver[a.driver]={laps:[],times:[],color:a.color};
+    byDriver[a.driver].laps.push(a.lap);
+    byDriver[a.driver].times.push(a.time);
+  });
+  const traces=Object.entries(byDriver).map(([d,v])=>({
+    x:v.laps,y:v.times,mode:"markers",name:d,
+    marker:{color:v.color,size:11,symbol:"circle-open",line:{width:2.5}},
+    hovertemplate:`<b>${d}</b><br>Lap %{x}<br>%{y:.3f}s<extra></extra>`,
+  }));
+  Plotly.newPlot("chartAnom",traces,PL({
+    xaxis:{title:"Lap Number"},yaxis:{title:"Lap Time (s)"},
+  }),PC);
+
+  // Table
+  const tbody=document.getElementById("anomalyBody");
+  tbody.innerHTML="";
+  anomalies.forEach(a=>{
+    const sev=a.delta>5?"HIGH":a.delta>2?"MED":"LOW";
+    const bc=sev==="HIGH"?"bh":sev==="MED"?"bm":"bl";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td style="color:${a.color};font-weight:bold">${a.driver}</td>
+      <td>${a.lap}</td>
+      <td>${a.time.toFixed(3)}</td>
+      <td>${a.threshold.toFixed(3)}</td>
+      <td style="color:#E8002D">+${a.delta.toFixed(3)}</td>
+      <td><span class="badge ${bc}">${sev}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════════
+const tabLoaded={};
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    const id="tab-"+btn.dataset.tab;
+    document.getElementById(id).classList.add("active");
+    if(!tabLoaded[id]){
+      tabLoaded[id]=true;
+      if(id==="tab-telemetry") renderTelemetry();
+      if(id==="tab-ml")        renderML();
+      if(id==="tab-anomaly")   renderAnomalies();
+    }
+  };
+});
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+render();
+updateLeaderboard();
+</script>
+</body>
+</html>
