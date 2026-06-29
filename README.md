@@ -1,10 +1,8 @@
 # 🏎️ F1 AI/ML Race Performance Analysis
 
 ## Live Demo
-
-🌐 Streamlit Dashboard:
-
-https://f1-ai-ml-analysis---intern-assignment-tpehj4bopekbgillfmwp9j.streamlit.app/
+ 
+https://sangeethavijayan01-spec.github.io/F1-AI-ML-analysis---intern-assignment/
 
 ---
 
